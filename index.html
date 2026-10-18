@@ -203,7 +203,7 @@
 
     <div class="form-group">
       <label>Chave API Google Gemini:</label>
-      <input type="password" id="geminiKey" value="AQ.Ab8RN6JGJK5OOYkq4ZJLG_xV8VyNhO99rqW-RiFTw5y-Hb_fzw" placeholder="Chave Gemini">
+      <input type="password" id="geminiKey" value="AQ.Ab8RN6JGJK5OOYkq4ZJLG_xV8VyNhO99rqW-RiFTw5y-Hb_fzw" onchange="guardarChaveLocalmente()" placeholder="Chave Gemini">
     </div>
 
     <div class="form-group">
@@ -326,6 +326,22 @@
   </div>
 
   <script>
+    // Carrega a chave salva do dispositivo no carregamento da página
+    function carregarChaveSalva() {
+      const savedGemini = localStorage.getItem('geminiKey');
+      if (savedGemini) {
+        document.getElementById('geminiKey').value = savedGemini;
+      }
+    }
+
+    // Grava a chave no armazenamento local do dispositivo
+    function guardarChaveLocalmente() {
+      const gemini = document.getElementById('geminiKey').value.trim();
+      if (gemini) {
+        localStorage.setItem('geminiKey', gemini);
+      }
+    }
+
     function tratarSelecaoEscola() {
       const select = document.getElementById('escolaSelect');
       const inputCustom = document.getElementById('escolaCustom');
@@ -388,6 +404,7 @@
 
     async function gerarProva() {
       limparAvisos();
+      guardarChaveLocalmente();
 
       const keyGemini = document.getElementById('geminiKey').value.trim();
       if (!keyGemini) {
@@ -404,103 +421,3 @@
         areaProva.classList.add('limite-1-pagina');
       } else {
         areaProva.classList.remove('limite-1-pagina');
-      }
-
-      document.getElementById('out-escola').innerText = obterNomeEscola();
-      document.getElementById('out-prof').innerText = obterNomeProfessor();
-      document.getElementById('out-disc').innerText = document.getElementById('disciplina').value;
-
-      const tema = document.getElementById('tema').value;
-      const genero = document.getElementById('genero').value;
-      const tipo = document.getElementById('tipoQuestoes').value;
-      const quantidade = document.getElementById('qtdQuestoes').value;
-      const nivelReferencia = document.getElementById('turmaRef').value;
-      const tamanhoTexto = document.getElementById('tamanhoTexto').value;
-
-      const divInstrucoes = document.getElementById('out-instrucoes');
-      if (tipo === 'discursivas') {
-        divInstrucoes.innerHTML = "<b>INSTRUÇÕES:</b> Leia o texto atentamente. As questões discursivas devem ser respondidas <b>NO SEU CADERNO</b> com respostas objetivas e justificadas.";
-      } else {
-        divInstrucoes.innerHTML = "<b>INSTRUÇÕES:</b> Responda às questões com atenção. Utilize caneta azul ou preta. Rasuras nas questões objetivas anulam a resposta.";
-      }
-
-      document.getElementById('out-texto').innerText = "⏳ Gerando texto e questões com o Google Gemini, por favor aguarde...";
-      document.getElementById('out-fonte').innerText = "";
-      document.getElementById('out-questoes').innerHTML = "";
-
-      let instrucaoGenero = (genero.includes("Notícia") || genero.includes("Artigo de Opinião"))
-        ? `Busque ou elabore uma matéria/artigo baseado em fatos reais sobre o tema "${tema}".`
-        : `Crie um texto do gênero "${genero}" sobre o tema "${tema}".`;
-
-      let instrucaoQuestoes = (tipo === 'discursivas')
-        ? `Crie ${quantidade} questões DISCURSIVAS de interpretação. REGRAS OBRIGATÓRIAS: 1. Seja extremamente DIRETO AO PONTO. 2. Cada pergunta deve ser CURTA (no máximo 2 a 3 linhas). 3. Foque na opinião do aluno relacionada com a sua realidade e cotidiano.`
-        : `Crie ${quantidade} questões OBJETIVAS de múltipla escolha (4 alternativas A, B, C, D) com enunciados curtos e diretos.`;
-
-      const prompt = `
-      Atue como um professor especialista em elaboração de avaliações.
-      ${instrucaoGenero}
-      Nível do texto: adequado para "${nivelReferencia}".
-      Tamanho do texto: ${tamanhoTexto}.
-
-      ${instrucaoQuestoes}
-
-      Obrigatório: Inclua uma fonte/referência bibliográfica realista para o texto na chave "fonte".
-
-      Retorne APENAS um JSON válido no seguinte formato exato, sem marcações markdown adicionais:
-      {
-        "titulo": "Título do Texto",
-        "texto": "Parágrafos do texto aqui...",
-        "fonte": "Fonte: Nome do Veículo / Autor, Ano.",
-        "questoes": [
-          {
-            "numero": 1,
-            "enunciado": "Pergunta direta...",
-            "opcoes": ["(A) ...", "(B) ...", "(C) ...", "(D) ..."]
-          }
-        ]
-      }
-      Nota: Se o tipo for 'discursivas', omita totalmente a chave 'opcoes' de cada questão.
-      `;
-
-      try {
-        exibirStatus("Contactando Google Gemini (3.8 Flash)...");
-        const JSONResultado = await chamarGemini(keyGemini, prompt);
-
-        document.getElementById('out-titulo').innerText = JSONResultado.titulo.toUpperCase();
-        document.getElementById('out-texto').innerText = JSONResultado.texto;
-        document.getElementById('out-fonte').innerText = JSONResultado.fonte || "Fonte: Elaborado para fins pedagógicos.";
-
-        const conteinerQuestoes = document.getElementById('out-questoes');
-        conteinerQuestoes.innerHTML = "";
-
-        JSONResultado.questoes.forEach(q => {
-          const divQ = document.createElement('div');
-          divQ.className = 'questao-item';
-          
-          let htmlQuestao = `<div class="questao-titulo">QUESTÃO ${q.numero}</div><div>${q.enunciado}</div>`;
-
-          if (q.opcoes && q.opcoes.length > 0) {
-            q.opcoes.forEach(opt => {
-              htmlQuestao += `<div class="alternativa">${opt}</div>`;
-            });
-          } else {
-            htmlQuestao += `<div class="aviso-caderno">➔ Responda a esta questão no seu caderno.</div>`;
-          }
-
-          divQ.innerHTML = htmlQuestao;
-          conteinerQuestoes.appendChild(divQ);
-        });
-
-        limparAvisos();
-
-      } catch (err) {
-        exibirErro(err.message || "Erro ao conectar com o Google Gemini.");
-        document.getElementById('out-texto').innerText = "Ocorreu um erro ao gerar o conteúdo. Veja a mensagem no painel acima.";
-        console.error(err);
-      } finally {
-        btnGerar.disabled = false;
-      }
-    }
-  </script>
-</body>
-</html>
