@@ -205,8 +205,8 @@
       <div class="col form-group">
         <label>Engine / Provedor de IA:</label>
         <select id="engineSelect" onchange="tratarEngineChange()">
-          <option value="gemini">Google Gemini (3.8 Flash)</option>
-          <option value="groq" selected>Groq (Llama 3.3 70B - Ultra Rápido)</option>
+          <option value="gemini" selected>Google Gemini (3.8 Flash)</option>
+          <option value="groq">Groq (Llama 3.3 70B - Ultra Rápido)</option>
           <option value="auto">Automático (Tenta Gemini, usa Groq se exceder cota)</option>
         </select>
       </div>
@@ -215,7 +215,7 @@
     <div class="row">
       <div class="col form-group" id="groupGeminiKey">
         <label>Chave API Google Gemini:</label>
-        <input type="password" id="geminiKey" value="AQ.Ab8RN6JGJK5OOYkq4ZJLG_xV8VyNhO99rqW-RiFTw5y-Hb_fzw" placeholder="Chave Gemini">
+        <input type="password" id="geminiKey" value="AQ.Ab8RN6KVgipLsitrAmz1UhW03fqMt8u4StLo96Soe3fVd3tiWQ" placeholder="Chave Gemini">
       </div>
       <div class="col form-group" id="groupGroqKey">
         <label>Chave API Groq:</label>
@@ -533,7 +533,7 @@
         } else if (engine === 'groq') {
           exibirStatus("Contactando Groq (Llama 3)...");
           JSONResultado = await chamarGroq(keyGroq, prompt);
-        } else { // Modo Automático (Gemini -> Fallback para Groq)
+        } else { // Modo Automático
           try {
             exibirStatus("Tentando via Google Gemini...");
             JSONResultado = await chamarGemini(keyGemini, prompt);
