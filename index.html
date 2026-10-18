@@ -200,10 +200,10 @@
 
   <div class="no-print">
     <h2>📝 Gerador de Avaliações (Google Gemini)</h2>
-    
+
     <div class="form-group">
       <label>Chave API Google Gemini:</label>
-      <input type="password" id="geminiKey" onchange="guardarChaveLocalmente()" placeholder="Chave Gemini (ficará salva no navegador)">
+      <input type="password" id="geminiKey" value="AQ.Ab8RN6JGJK5OOYkq4ZJLG_xV8VyNhO99rqW-RiFTw5y-Hb_fzw" placeholder="Chave Gemini">
     </div>
 
     <div class="form-group">
@@ -326,20 +326,6 @@
   </div>
 
   <script>
-    // Carrega a chave salva no localStorage do navegador ao abrir a página
-    function carregarChaveSalva() {
-      const savedGemini = localStorage.getItem('geminiKey');
-      if (savedGemini) {
-        document.getElementById('geminiKey').value = savedGemini;
-      }
-    }
-
-    // Salva a chave no localStorage sempre que alterada
-    function guardarChaveLocalmente() {
-      const gemini = document.getElementById('geminiKey').value.trim();
-      localStorage.setItem('geminiKey', gemini);
-    }
-
     function tratarSelecaoEscola() {
       const select = document.getElementById('escolaSelect');
       const inputCustom = document.getElementById('escolaCustom');
@@ -379,7 +365,6 @@
       box.style.display = 'block';
     }
 
-    // Requisição exclusiva para o Google Gemini
     async function chamarGemini(apiKey, prompt) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
       const response = await fetch(url, {
@@ -403,11 +388,10 @@
 
     async function gerarProva() {
       limparAvisos();
-      guardarChaveLocalmente();
 
       const keyGemini = document.getElementById('geminiKey').value.trim();
       if (!keyGemini) {
-        exhibirErro("Por favor, insira a sua chave de API do Google Gemini.");
+        exibirErro("Por favor, insira a sua chave de API do Gemini.");
         return;
       }
 
@@ -440,7 +424,7 @@
         divInstrucoes.innerHTML = "<b>INSTRUÇÕES:</b> Responda às questões com atenção. Utilize caneta azul ou preta. Rasuras nas questões objetivas anulam a resposta.";
       }
 
-      document.getElementById('out-texto').innerText = "⏳ Gerando texto e questões com o Gemini 3.8, por favor aguarde...";
+      document.getElementById('out-texto').innerText = "⏳ Gerando texto e questões com o Google Gemini, por favor aguarde...";
       document.getElementById('out-fonte').innerText = "";
       document.getElementById('out-questoes').innerHTML = "";
 
@@ -479,10 +463,9 @@
       `;
 
       try {
-        exibirStatus("Contactando Google Gemini 3.8 Flash...");
+        exibirStatus("Contactando Google Gemini (3.8 Flash)...");
         const JSONResultado = await chamarGemini(keyGemini, prompt);
 
-        // Preenchimento dos dados na folha da prova
         document.getElementById('out-titulo').innerText = JSONResultado.titulo.toUpperCase();
         document.getElementById('out-texto').innerText = JSONResultado.texto;
         document.getElementById('out-fonte').innerText = JSONResultado.fonte || "Fonte: Elaborado para fins pedagógicos.";
@@ -511,16 +494,13 @@
         limparAvisos();
 
       } catch (err) {
-        exibirErro(err.message || "Erro ao conectar ao Google Gemini.");
+        exibirErro(err.message || "Erro ao conectar com o Google Gemini.");
         document.getElementById('out-texto').innerText = "Ocorreu um erro ao gerar o conteúdo. Veja a mensagem no painel acima.";
         console.error(err);
       } finally {
         btnGerar.disabled = false;
       }
     }
-
-    // Inicialização da interface
-    carregarChaveSalva();
   </script>
 </body>
 </html>
