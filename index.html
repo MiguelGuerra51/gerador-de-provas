@@ -199,28 +199,11 @@
 <body>
 
   <div class="no-print">
-    <h2>📝 Gerador de Avaliações (Gemini + Groq)</h2>
+    <h2>📝 Gerador de Avaliações (Google Gemini)</h2>
     
-    <div class="row">
-      <div class="col form-group">
-        <label>Engine / Provedor de IA:</label>
-        <select id="engineSelect" onchange="tratarEngineChange()">
-          <option value="gemini" selected>Google Gemini (3.8 Flash)</option>
-          <option value="groq">Groq (Llama 3.3 70B - Ultra Rápido)</option>
-          <option value="auto">Automático (Tenta Gemini, usa Groq se exceder cota)</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="col form-group" id="groupGeminiKey">
-        <label>Chave API Google Gemini:</label>
-        <input type="password" id="geminiKey" value="AQ.Ab8RN6KVgipLsitrAmz1UhW03fqMt8u4StLo96Soe3fVd3tiWQ" placeholder="Chave Gemini">
-      </div>
-      <div class="col form-group" id="groupGroqKey">
-        <label>Chave API Groq:</label>
-        <input type="password" id="groqKey" value="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" placeholder="Chave Groq">
-      </div>
+    <div class="form-group">
+      <label>Chave API Google Gemini:</label>
+      <input type="password" id="geminiKey" onchange="guardarChaveLocalmente()" placeholder="Chave Gemini (ficará salva no navegador)">
     </div>
 
     <div class="form-group">
@@ -343,21 +326,18 @@
   </div>
 
   <script>
-    function tratarEngineChange() {
-      const engine = document.getElementById('engineSelect').value;
-      const gGemini = document.getElementById('groupGeminiKey');
-      const gGroq = document.getElementById('groupGroqKey');
-
-      if (engine === 'gemini') {
-        gGemini.style.display = 'block';
-        gGroq.style.display = 'none';
-      } else if (engine === 'groq') {
-        gGemini.style.display = 'none';
-        gGroq.style.display = 'block';
-      } else { // auto
-        gGemini.style.display = 'block';
-        gGroq.style.display = 'block';
+    // Carrega a chave salva no localStorage do navegador ao abrir a página
+    function carregarChaveSalva() {
+      const savedGemini = localStorage.getItem('geminiKey');
+      if (savedGemini) {
+        document.getElementById('geminiKey').value = savedGemini;
       }
+    }
+
+    // Salva a chave no localStorage sempre que alterada
+    function guardarChaveLocalmente() {
+      const gemini = document.getElementById('geminiKey').value.trim();
+      localStorage.setItem('geminiKey', gemini);
     }
 
     function tratarSelecaoEscola() {
@@ -399,7 +379,7 @@
       box.style.display = 'block';
     }
 
-    // Requisição para o Google Gemini
+    // Requisição exclusiva para o Google Gemini
     async function chamarGemini(apiKey, prompt) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
       const response = await fetch(url, {
@@ -421,41 +401,15 @@
       return JSON.parse(rawText);
     }
 
-    // Requisição para o Groq (Llama 3)
-    async function chamarGroq(apiKey, prompt) {
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          response_format: { type: "json_object" },
-          messages: [
-            { role: "system", content: "Você é um professor especialista em elaboração de avaliações escolares brasileiras. Responda APENAS com um objeto JSON válido." },
-            { role: "user", content: prompt }
-          ],
-          temperature: 0.5
-        })
-      });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error?.message || "Erro de comunicação com a Groq.");
-      }
-
-      const data = await response.json();
-      const rawText = data.choices[0].message.content.trim();
-      return JSON.parse(rawText);
-    }
-
     async function gerarProva() {
       limparAvisos();
+      guardarChaveLocalmente();
 
-      const engine = document.getElementById('engineSelect').value;
       const keyGemini = document.getElementById('geminiKey').value.trim();
-      const keyGroq = document.getElementById('groqKey').value.trim();
+      if (!keyGemini) {
+        exhibirErro("Por favor, insira a sua chave de API do Google Gemini.");
+        return;
+      }
 
       const btnGerar = document.getElementById('btnGerar');
       btnGerar.disabled = true;
@@ -486,7 +440,7 @@
         divInstrucoes.innerHTML = "<b>INSTRUÇÕES:</b> Responda às questões com atenção. Utilize caneta azul ou preta. Rasuras nas questões objetivas anulam a resposta.";
       }
 
-      document.getElementById('out-texto').innerText = "⏳ Gerando texto e questões com a IA, por favor aguarde...";
+      document.getElementById('out-texto').innerText = "⏳ Gerando texto e questões com o Gemini 3.8, por favor aguarde...";
       document.getElementById('out-fonte').innerText = "";
       document.getElementById('out-questoes').innerHTML = "";
 
@@ -524,25 +478,9 @@
       Nota: Se o tipo for 'discursivas', omita totalmente a chave 'opcoes' de cada questão.
       `;
 
-      let JSONResultado = null;
-
       try {
-        if (engine === 'gemini') {
-          exibirStatus("Contactando Google Gemini...");
-          JSONResultado = await chamarGemini(keyGemini, prompt);
-        } else if (engine === 'groq') {
-          exibirStatus("Contactando Groq (Llama 3)...");
-          JSONResultado = await chamarGroq(keyGroq, prompt);
-        } else { // Modo Automático
-          try {
-            exibirStatus("Tentando via Google Gemini...");
-            JSONResultado = await chamarGemini(keyGemini, prompt);
-          } catch (errGemini) {
-            console.warn("Gemini falhou, alternando para Groq:", errGemini);
-            exibirStatus("Gemini ocupado/com cota excedida. Alternando automaticamente para Groq...");
-            JSONResultado = await chamarGroq(keyGroq, prompt);
-          }
-        }
+        exibirStatus("Contactando Google Gemini 3.8 Flash...");
+        const JSONResultado = await chamarGemini(keyGemini, prompt);
 
         // Preenchimento dos dados na folha da prova
         document.getElementById('out-titulo').innerText = JSONResultado.titulo.toUpperCase();
@@ -573,7 +511,7 @@
         limparAvisos();
 
       } catch (err) {
-        exibirErro(err.message || "Erro ao conectar aos serviços de IA.");
+        exibirErro(err.message || "Erro ao conectar ao Google Gemini.");
         document.getElementById('out-texto').innerText = "Ocorreu um erro ao gerar o conteúdo. Veja a mensagem no painel acima.";
         console.error(err);
       } finally {
@@ -582,7 +520,7 @@
     }
 
     // Inicialização da interface
-    tratarEngineChange();
+    carregarChaveSalva();
   </script>
 </body>
 </html>
